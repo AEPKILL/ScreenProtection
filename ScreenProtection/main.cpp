@@ -43,7 +43,7 @@ int main(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdS
 	}
 
 	hwnd = CreateWindow(szAppName, NULL,
-		WS_DLGFRAME | WS_THICKFRAME | WS_POPUP,
+		WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP,
 		0, 0,
 		GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
 		NULL, NULL, hInstance,
@@ -77,15 +77,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static Bitmap* bitmap = NULL;
 	static Bitmap* background = NULL;
 	static ScreenProtection* screenProtection;
+	static HWND taskBar = FindWindow(TEXT("Shell_TrayWnd"), NULL);
+
 	switch (message)
 	{
 	case WM_CREATE:
+		// 隐藏任务栏
+		ShowWindow(taskBar, SW_HIDE);
 		// 获取屏幕宽高
-		cxScreen = GetSystemMetrics(SM_CXSCREEN); //屏幕宽度 
+		cxScreen = GetSystemMetrics(SM_CXSCREEN); 
 		cyScreen = GetSystemMetrics(SM_CYSCREEN);
-		
-
-
+		// 获取hdc
 		hdc = GetDC(hwnd);
 		// 初始化 GdiPlus
 		GdiplusStartup(&pGdiToken, &gdiplusStartupInput, NULL);
@@ -97,7 +99,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		memGraphics = new Graphics(bitmap);
 		// 初始化屏保绘图类
 		screenProtection = new ScreenProtection(cxScreen, cyScreen);
-		screenProtection->Init(TEXT("./config.ini"));
+		screenProtection->Init(TEXT("./ScreenProtection.ini"));
 		// 创建定时器
 		SetTimer(hwnd, ID_TIMER, 100, NULL);
 		return 0;
@@ -107,7 +109,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		graphics->DrawImage(bitmap,0,0);
 		return 0;
 
-		//处理善后工作 
+	//处理善后工作 
 	case WM_KEYDOWN:
 	case WM_LBUTTONDOWN:
 	case WM_DESTROY:
@@ -115,6 +117,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		delete memGraphics;
 		delete bitmap;
 		delete screenProtection;
+		ShowWindow(taskBar, SW_SHOW);
 		GdiplusShutdown(pGdiToken);
 		KillTimer(hwnd, ID_TIMER);
 		ReleaseDC(hwnd, hdc);

@@ -8,12 +8,7 @@ bool ScreenProtection::Init(PTCHAR configFilePath)
 	LinearGradientBrush* brush = new LinearGradientBrush(Rect(0, 0, this->screenWidth, this->screenHeight), Color(255*0.6,68,68,68), Color(255*0.9,0,0,0), 140);
 	// 初始化背景图片
 	GetPrivateProfileString(TEXT("config"), TEXT("background"), DEFAULT_STRING, strBuffer, MAX_PATH, configFilePath);
-	if (CompareString(local, NORM_IGNORECASE | LINGUISTIC_IGNORECASE, strBuffer, MAX_PATH, DEFAULT_STRING, MAX_PATH)==2)
-	{
-		return false;
-	}
 	this->background = Image::FromFile(strBuffer);
-
 	// 获取 title
 	GetPrivateProfileString(TEXT("config"), TEXT("title"), TEXT("AEPKILL"), this->title, MAX_PATH, configFilePath);
 
