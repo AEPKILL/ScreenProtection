@@ -99,7 +99,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		memGraphics = new Graphics(bitmap);
 		// 初始化屏保绘图类
 		screenProtection = new ScreenProtection(cxScreen, cyScreen);
-		screenProtection->Init(TEXT("./ScreenProtection.ini"));
+		screenProtection->Init(TEXT("D:/ScreenProtection.ini"));
 		// 创建定时器
 		SetTimer(hwnd, ID_TIMER, 100, NULL);
 		return 0;
