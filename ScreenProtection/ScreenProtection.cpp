@@ -4,8 +4,7 @@ bool ScreenProtection::Init(PTCHAR configFilePath)
 {
 	static TCHAR strBuffer[MAX_PATH];
 	LCID local = GetThreadLocale();
-	Graphics* graphics = NULL;
-	LinearGradientBrush* brush = new LinearGradientBrush(Rect(0, 0, this->screenWidth, this->screenHeight), Color(255*0.6,68,68,68), Color(255*0.9,0,0,0), 140);
+	
 	// 初始化背景图片
 	GetPrivateProfileString(TEXT("config"), TEXT("background"), DEFAULT_STRING, strBuffer, MAX_PATH, configFilePath);
 	this->background = Image::FromFile(strBuffer);
@@ -24,38 +23,50 @@ bool ScreenProtection::Init(PTCHAR configFilePath)
 	// 初始化画刷
 	this->brush = new SolidBrush(Color(255, 255, 255));
 
-	// 初始化遮罩
-	this->mask = new Bitmap(this->screenWidth, this->screenHeight);
-	graphics = new Graphics(this->mask);
+	// Init Backgorund
+	this->InitBackground();
+
+	return true;
+}
+
+void ScreenProtection::InitBackground() 
+{
+	Image* mask = NULL;
+	Image* mask2 = NULL;
+	Image* newBackground = NULL;
+	Graphics* graphics = NULL;
+	LinearGradientBrush* brush = new LinearGradientBrush(Rect(0, 0, this->screenWidth, this->screenHeight), Color(255 * 0.6, 68, 68, 68), Color(255 * 0.9, 0, 0, 0), 140);
+
+	newBackground = new Bitmap(this->screenWidth, this->screenHeight);
+
+	mask = new Bitmap(this->screenWidth, this->screenHeight);
+	graphics = new Graphics(mask);
 	graphics->FillRectangle(brush, Rect(0, 0, this->screenWidth, this->screenHeight));
 	delete graphics;
-	
-	this->mask2 = new Bitmap(this->screenWidth, this->screenHeight);
-	graphics = new Graphics(this->mask2);
+
+	mask2 = new Bitmap(this->screenWidth, this->screenHeight);
+	graphics = new Graphics(mask2);
 	graphics->Clear(Color((byte)(255 * 0.2), 68, 68, 68));
 	delete graphics;
-	
+
+	graphics = new Graphics(newBackground);
+	graphics->DrawImage(this->background, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, this->background->GetWidth(), this->background->GetHeight(), UnitPixel);
+	graphics->DrawImage(mask, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, mask->GetWidth(), mask->GetHeight(), UnitPixel);
+	graphics->DrawImage(mask2, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, mask2->GetWidth(), mask2->GetHeight(), UnitPixel);
+	delete graphics;
+
+	delete this->background;
+	this->background = newBackground;
+
+	delete mask;
+	delete mask2;
 	delete brush;
-	return true;
 }
 
 void ScreenProtection::DrawScreenProtection(Gdiplus::Graphics* graphics)
 {
 	graphics->Clear(Color(255, 0, 0));
-	this->DrawBackground(graphics);
-	this->DrawMask(graphics);
 	this->DrawTextContent(graphics);
-}
-
-void ScreenProtection::DrawBackground(Gdiplus::Graphics* graphics)
-{
-	graphics->DrawImage(this->background,Rect(0,0,this->screenWidth,this->screenHeight) , 0 , 0, this->background->GetWidth(),this->background->GetHeight() ,UnitPixel);
-}
-
-void ScreenProtection::DrawMask(Gdiplus::Graphics* graphics)
-{
-	graphics->DrawImage(this->mask, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, this->mask->GetWidth(), this->mask->GetHeight(), UnitPixel);
-	graphics->DrawImage(this->mask2, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, this->mask2->GetWidth(), this->mask2->GetHeight(), UnitPixel);
 }
 
 void ScreenProtection::DrawTextContent(Gdiplus::Graphics* graphics)
@@ -69,14 +80,18 @@ void ScreenProtection::DrawTextContent(Gdiplus::Graphics* graphics)
 
 	int titleY = 0, descriptionY = 0, lineWidth = 1, lineMargin = 20, lineLength = 0;
 
+
 	// 获取时间
 	GetLocalTime(&time);
 	wsprintf(timeStr,TEXT("%02d:%02d:%02d"), time.wHour, time.wMinute, time.wSecond);
 	
+	// 绘制背景
+	graphics->DrawImage(this->background, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, this->background->GetWidth(), this->background->GetHeight(), UnitPixel);
+
 	// 测量文本宽高
-	graphics->MeasureString(this->title, lstrlen(this->title), this->titleFont, PointF(0, 0), rectTitle);
-	graphics->MeasureString(this->description, lstrlen(this->description), this->descriptorFont, PointF(0, 0), rectDescription);
-	graphics->MeasureString(timeStr, lstrlen(timeStr), this->timeFont, PointF(0, 0), rectTime);
+	graphics->MeasureString(this->title, lstrlen(this->title), this->titleFont, PointF(0, 50), rectTitle);
+	graphics->MeasureString(this->description, lstrlen(this->description), this->descriptorFont, PointF(0, 50), rectDescription);
+	graphics->MeasureString(timeStr, lstrlen(timeStr), this->timeFont, PointF(0, 50), rectTime);
 
 	// 计算文本位置
 	titleY = (this->screenHeight - rectTitle->Height - rectDescription->Height - (lineMargin + lineWidth) * 2) / 2;
@@ -118,5 +133,4 @@ ScreenProtection::~ScreenProtection()
 	delete this->titleFont;
 	delete this->background;
 	delete this->brush;
-	delete this->mask;
 }

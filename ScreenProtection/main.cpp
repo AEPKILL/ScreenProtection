@@ -163,7 +163,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		screenProtection = new ScreenProtection(cxScreen, cyScreen);
 		screenProtection->Init(iniFilePath);
 		// 创建定时器
-		SetTimer(hwnd, ID_TIMER, 100, NULL);
+		SetTimer(hwnd, ID_TIMER, 1000, NULL);
 		return 0;
 
 	case WM_TIMER:
