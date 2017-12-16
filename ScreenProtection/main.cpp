@@ -21,6 +21,9 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 // 配置文件路径
 TCHAR iniFilePath[MAX_PATH];
 
+// 是否开启特效
+bool enableEffect = true;
+
 int main(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow)
 {
 	static TCHAR szAppName[] = TEXT("AEPKILL");
@@ -122,11 +125,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		bitmap = new Bitmap(cxScreen , cyScreen);
 		// 初始化内存画板
 		memGraphics = new Graphics(bitmap);
+		// 抗锯齿
+		memGraphics->SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
 		// 初始化屏保绘图类
 		screenProtection = new ScreenProtection(cxScreen, cyScreen);
 		screenProtection->Init(iniFilePath);
-		// 创建定时器
-		SetTimer(hwnd, ID_TIMER, 1000, NULL);
+
+		// 创建定时器 特效模式下需要每秒刷新60帧
+		if (enableEffect) 
+		{
+			SetTimer(hwnd, ID_TIMER, 1000/55, NULL);
+		}
+		else
+		{
+			SetTimer(hwnd, ID_TIMER, 1000, NULL);
+		}
+
 		return 0;
 
 	case WM_TIMER:

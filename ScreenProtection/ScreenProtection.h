@@ -1,7 +1,7 @@
 #pragma once
-#include <windows.h>
-#include <gdiplus.h>
 #include <string>
+#include "Effect.h"
+#include "EffectPool.h"
 
 #define DEFAULT_STRING TEXT("AEPKILL_102654123.0")
 
@@ -13,27 +13,49 @@ public:
 	void DrawScreenProtection(Graphics* graphics)
 	{
 		graphics->Clear(Color(255, 0, 0));
-		this->DrawTextContent(graphics);
+		// 绘制背景
+		graphics->DrawImage(this->background, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, this->background->GetWidth(), this->background->GetHeight(), UnitPixel);
+		// 绘制特效
+		 this->DrawEffect(graphics);
+		// 绘制文本
+		 this->DrawTextContent(graphics);
 	}
 	bool Init(PTCHAR configFilePath) 
 	{
-		static TCHAR strBuffer[MAX_PATH];
+		static WCHAR strBuffer[MAX_PATH];
 		LCID local = GetThreadLocale();
 
 		// 初始化背景图片
-		GetPrivateProfileString(TEXT("config"), TEXT("background"), DEFAULT_STRING, strBuffer, MAX_PATH, configFilePath);
+		GetPrivateProfileStringW(TEXT("config"), TEXT("background"), DEFAULT_STRING, strBuffer, MAX_PATH, configFilePath);
 		this->background = Image::FromFile(strBuffer);
 		// 获取 title
-		GetPrivateProfileString(TEXT("config"), TEXT("title"), TEXT("AEPKILL"), this->title, MAX_PATH, configFilePath);
+		GetPrivateProfileStringW(TEXT("config"), TEXT("title"), TEXT("AEPKILL"), this->title, MAX_PATH, configFilePath);
 
 		// 获取 description
-		GetPrivateProfileString(TEXT("config"), TEXT("description"), TEXT("你怀疑生活洗刷你的灵感，可你又拖到明晚！"), this->description, MAX_PATH, configFilePath);
+		GetPrivateProfileStringW(TEXT("config"), TEXT("description"), TEXT("你怀疑生活洗刷你的灵感，可你又拖到明晚！"), this->description, MAX_PATH, configFilePath);
 
-		// 创建字体
-		GetPrivateProfileString(TEXT("config"), TEXT("font"), TEXT("Microsoft Yahei"), strBuffer, MAX_PATH, configFilePath);
+		// 获取创建字体
+		GetPrivateProfileStringW(TEXT("config"), TEXT("font"), TEXT("Microsoft Yahei"), strBuffer, MAX_PATH, configFilePath);
 		this->titleFont = new Font(strBuffer, 40);
 		this->descriptorFont = new Font(strBuffer, 16);
 		this->timeFont = new Font(strBuffer, 24);
+
+		// 获取特效对象
+		GetPrivateProfileStringW(TEXT("config"), TEXT("effect"), TEXT(""), strBuffer, MAX_PATH, configFilePath);
+		this->effect = NULL;
+		if (lstrlen(strBuffer)) 
+		{
+			for (int i = 0; i < effectListLength; i++) 
+			{
+				Effect* effect = effectList[i];
+				if (effect->name == strBuffer)
+				{
+					this->effect = effect;
+					this->effect->Init(this->screenWidth, this->screenHeight);
+					break;
+				}
+			}
+		}
 
 		// 初始化画刷
 		this->brush = new SolidBrush(Color(255, 255, 255));
@@ -64,9 +86,11 @@ private:
 	Gdiplus::Image* background = NULL;
 	Gdiplus::Brush* brush = NULL;
 	
-	int screenHeight, screenWidth;
+	int screenHeight;
+	int screenWidth;
 	TCHAR title[MAX_PATH];
 	TCHAR description[MAX_PATH];
+	Effect* effect;
 
 	void InitBackground()
 	{
@@ -118,9 +142,6 @@ private:
 		GetLocalTime(&time);
 		wsprintf(timeStr, TEXT("%02d:%02d:%02d"), time.wHour, time.wMinute, time.wSecond);
 
-		// 绘制背景
-		graphics->DrawImage(this->background, Rect(0, 0, this->screenWidth, this->screenHeight), 0, 0, this->background->GetWidth(), this->background->GetHeight(), UnitPixel);
-
 		// 测量文本宽高
 		graphics->MeasureString(this->title, lstrlen(this->title), this->titleFont, PointF(0, 50), rectTitle);
 		graphics->MeasureString(this->description, lstrlen(this->description), this->descriptorFont, PointF(0, 50), rectDescription);
@@ -147,6 +168,14 @@ private:
 		delete rectTime;
 		delete rectTitle;
 		delete rectDescription;
+	}
+	
+	void DrawEffect(Gdiplus::Graphics* graphics)
+	{
+		if (this->effect) 
+		{
+			this->effect->DrawEffect(graphics);
+		}
 	}
 	void DrawLine(Gdiplus::Graphics* graphics, int x, int y, int length, int width)
 	{

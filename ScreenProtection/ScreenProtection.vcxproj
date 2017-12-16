@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="EffectPool.h" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BubbleEffect.h" />
     <ClInclude Include="Effect.h" />
+    <ClInclude Include="RandFloatNumber.h" />
     <ClInclude Include="ScreenProtection.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
