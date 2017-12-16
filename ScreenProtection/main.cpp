@@ -17,49 +17,9 @@
 
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+
+// 配置文件路径
 TCHAR iniFilePath[MAX_PATH];
-
-LPTSTR GetArgument(LPTSTR commandStr, int index) 
-{
-	static TCHAR buffer[MAX_PATH];
-	bool quoteFlag = false;
-	int commandLineLength = lstrlen(commandStr), current = 0, bufferIndex = 0;
-	buffer[0] = '\0';
-	for (int i = 0; i < commandLineLength; i++)
-	{
-		TCHAR ch = commandStr[i];
-		if (ch == '\"')
-		{
-			quoteFlag = !quoteFlag;
-		}
-		else if (ch == ' ' && !quoteFlag)
-		{
-			if (index == current)
-			{
-				break;
-			}
-			else
-			{
-				current++;
-			}
-			// 跳过连续空格
-			while (i<commandLineLength - 1 && commandStr[i+1] == ' ')
-			{
-				i++;
-			}
-		}
-		else
-		{
-			if (index == current)
-			{
-				buffer[bufferIndex++] = commandStr[i];
-				buffer[bufferIndex] = '\0';
-			}
-		}
-	}
-
-	return buffer;
-}
 
 int main(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow)
 {
@@ -68,30 +28,28 @@ int main(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdS
 	MSG            msg;
 	WNDCLASS    wndclass;
 	LPTSTR commandLine = GetCommandLine();
-	LPTSTR arg = GetArgument(commandLine , 1);
+	int argc = 0;
 	int iniFileLength = 0;
-	lstrcat(iniFilePath,GetArgument(commandLine,0));
+	LPWSTR* argv = CommandLineToArgvW(commandLine, &argc);
+	static HWND taskBar = FindWindow(TEXT("Shell_TrayWnd"), NULL);
+	
+	// 合成配置文件路径
+	lstrcat(iniFilePath,argv[0]);
 	iniFileLength = lstrlen(iniFilePath);
 	iniFileLength = iniFileLength - 4;
 	iniFilePath[iniFileLength] = '\0';
 	lstrcat(iniFilePath, TEXT(".ini"));
-	if ( arg[0] == '/') 
-	{
-		if (arg[1] == 'p')
-		{
-			return 0;
-		}
-		if (arg[1] == 'c')
-		{
-			MessageBox(NULL, TEXT("不支持设置"), TEXT("Error"), MB_ICONERROR);
-		}
-	}
+
+	// 释放资源
+	LocalFree(commandLine);
+	LocalFree(argv);
+
+	// 窗口信息
 	wndclass.style = CS_HREDRAW | CS_VREDRAW;
 	wndclass.lpfnWndProc = WndProc;
 	wndclass.cbClsExtra = 0;
 	wndclass.cbWndExtra = 0;
 	wndclass.hInstance = hInstance;
-
 	wndclass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wndclass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
@@ -104,6 +62,7 @@ int main(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdS
 		return 0;
 	}
 
+	// 创建屏保窗口
 	hwnd = CreateWindow(szAppName, NULL,
 		WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP,
 		0, 0,
@@ -111,18 +70,25 @@ int main(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdS
 		NULL, NULL, hInstance,
 		NULL);
 
-	//最大化显示 
+	// 最大化显示 
 	ShowWindow(hwnd, SW_SHOWMAXIMIZED); 
 	UpdateWindow(hwnd);
-	//隐藏鼠标光标 
+
+	// 隐藏鼠标光标和任务栏 
 	ShowCursor(FALSE); 
+	ShowWindow(taskBar, SW_HIDE);
+	
+	// 消息循环
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
-	//显示鼠标光标 
+	
+	// 显示鼠标光标和任务栏
 	ShowCursor(TRUE); 
+	ShowWindow(taskBar, SW_SHOW);
+
 	return msg.wParam;
 }
 
@@ -130,7 +96,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	using namespace Gdiplus;
 	static HDC          hdc;
-	//屏幕的宽度 高度. 
+	// 屏幕的宽度 高度
 	static  int cxScreen, cyScreen; 
 	static GdiplusStartupInput gdiplusStartupInput;
 	static ULONG_PTR pGdiToken;
@@ -139,13 +105,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static Bitmap* bitmap = NULL;
 	static Bitmap* background = NULL;
 	static ScreenProtection* screenProtection;
-	static HWND taskBar = FindWindow(TEXT("Shell_TrayWnd"), NULL);
-
+	
 	switch (message)
 	{
 	case WM_CREATE:
-		// 隐藏任务栏
-		ShowWindow(taskBar, SW_HIDE);
 		// 获取屏幕宽高
 		cxScreen = GetSystemMetrics(SM_CXSCREEN); 
 		cyScreen = GetSystemMetrics(SM_CYSCREEN);
@@ -179,7 +142,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		delete memGraphics;
 		delete bitmap;
 		delete screenProtection;
-		ShowWindow(taskBar, SW_SHOW);
 		GdiplusShutdown(pGdiToken);
 		KillTimer(hwnd, ID_TIMER);
 		ReleaseDC(hwnd, hdc);
